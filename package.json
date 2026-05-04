@@ -1,20 +1,36 @@
 {
-  "name": "backend",
+  "name": "project-management-backend",
   "version": "1.0.0",
-  "description": "stareting of backend",
+  "description": "A backend API for a project management application built with Node.js, Express, and MongoDB.",
   "keywords": [
     "backend",
-    "api",
-    "nodejs"
+    "API",
+    "creation"
   ],
-  "license": "ISC",
   "author": "Hamza",
+  "license": "ISC",
   "type": "module",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
+    "dev": "nodemon index.js"
   },
   "devDependencies": {
+    "nodemon": "^3.1.14",
     "prettier": "3.8.2"
+  },
+  "dependencies": {
+    "axios": "^1.15.0",
+    "bcrypt": "^6.0.0",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.1",
+    "express": "^5.2.1",
+    "express-validator": "^7.3.2",
+    "jsonwebtoken": "^9.0.3",
+    "mailgen": "^2.0.32",
+    "mongoose": "^9.4.1",
+    "multer": "^2.1.1",
+    "nodemailer": "^8.0.5"
   }
 }
