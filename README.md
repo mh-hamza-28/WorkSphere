@@ -49,6 +49,7 @@ A full-stack Project Management Application built with the MERN stack (MongoDB, 
 - **Nodemailer** - Email service
 - **Multer** - File uploads
 - **CORS** - Cross-origin requests
+- **POSTMAN** - Testing routes
 
 ### Frontend
 - **React 18** - UI library
