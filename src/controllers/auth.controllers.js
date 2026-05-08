@@ -10,6 +10,12 @@ import {
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 
+const cookieOptions = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+};
+
 const generateAccessAndRefreshTokens = async (userId) => {
   try {
     const user = await User.findById(userId);
@@ -89,7 +95,7 @@ const registerUser = asyncHandler(async (req, res) => {
 
 const Login = asyncHandler (async(req,res)=>
 {
-const {email,password,username} = req.body;
+const {email,password} = req.body;
 
 if (!email)
 {
@@ -120,10 +126,6 @@ const loggedInUser = await User.findById(user._id).select(
     "-password -refreshToken -emailverificationToken -emailverificationExpiry",
   );
 
-const cookieOptions = {
-    httpOnly: true,
-    secure: false, // Set to true in production
-}
 return res
 .status(200)
 .cookie("refreshToken", refreshToken, cookieOptions)
@@ -155,15 +157,10 @@ await User.findByIdAndUpdate(req.user._id,
   returnDocument: 'after'
 },
 );  
-const options = 
-{
-    httpOnly: true,
-    secure: false, // Set to true in production
-}
 return res
 .status(200)
-.clearCookie("refreshToken", options)
-.clearCookie("accessToken", options)
+.clearCookie("refreshToken", cookieOptions)
+.clearCookie("accessToken", cookieOptions)
 .json(
   new ApiResponse(200, {},"User logged out successfully")); 
 });
@@ -273,10 +270,6 @@ const refreshAccessToken = asyncHandler(async(req,res)=>{
       throw new ApiError(401, "Refresh token expired, please login again");
     }
 
-const options = {
-  httpOnly: true,
-secure: false, // Set to true in production
-}
 const { accessToken, refreshToken:newRefreshToken } = await generateAccessAndRefreshTokens(user._id);
 
 user.refreshToken = newRefreshToken;
@@ -284,8 +277,8 @@ await user.save();
 
 return res
 .status(200)
-.cookie("refreshToken", newRefreshToken, options)
-.cookie("accessToken", accessToken, options)
+.cookie("refreshToken", newRefreshToken, cookieOptions)
+.cookie("accessToken", accessToken, cookieOptions)
 .json(
   new ApiResponse(200,
     {

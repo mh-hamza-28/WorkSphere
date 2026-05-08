@@ -23,7 +23,7 @@
   right: -50%;
   width: 100%;
   height: 100%;
-  background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(201, 157, 12, 0.856) 0%, transparent 70%);
   animation: float 20s ease-in-out infinite;
 }
 
@@ -34,7 +34,7 @@
   left: -50%;
   width: 100%;
   height: 100%;
-  background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(108, 16, 212, 0.267) 0%, transparent 70%);
   animation: float 25s ease-in-out infinite reverse;
 }
 

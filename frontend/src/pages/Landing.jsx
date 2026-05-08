@@ -19,10 +19,6 @@ const Landing = () => {
       {/* Hero Section */}
       <section className="hero-section">
         <div className="hero-content">
-          <div className="hero-badge">
-            <Zap size={16} />
-            <span>Streamline Your Workflow</span>
-          </div>
           <h1 className="hero-title">
             Manage Projects with
             <span className="gradient-text"> WorkSphere</span>
@@ -38,20 +34,6 @@ const Landing = () => {
             <Link to="/login" className="btn btn-secondary btn-lg">
               Sign In
             </Link>
-          </div>
-          <div className="hero-stats">
-            <div className="stat-item">
-              <div className="stat-number">10K+</div>
-              <div className="stat-label">Active Users</div>
-            </div>
-            <div className="stat-item">
-              <div className="stat-number">50K+</div>
-              <div className="stat-label">Projects Created</div>
-            </div>
-            <div className="stat-item">
-              <div className="stat-number">99%</div>
-              <div className="stat-label">Satisfaction</div>
-            </div>
           </div>
         </div>
         <div className="hero-visual">

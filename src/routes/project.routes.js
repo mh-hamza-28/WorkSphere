@@ -10,16 +10,20 @@ import {
   deleteProject,
   updateMemberRole,
 } from "../controllers/project.controllers.js";
-import { validateRequest } from "../middlewares/validator.middleware.js";
+import { validate } from "../middlewares/validator.middleware.js";
 import {
-  createProjectValidator,
-  addMembertoProjectValidator,
+  addMemberToProjectSchema,
+  createProjectSchema,
+  projectIdSchema,
+  projectMemberSchema,
+  updateMemberRoleSchema,
 } from "../validators/validator.js";
 import {
   verifyJWT,
   validateProjectPermission,
 } from "../middlewares/auth.middleware.js";
 import { AvailableUserRole, UserRolesEnum } from "../utils/constants.js";
+import { inviteLimiter } from "../middlewares/rateLimit.middleware.js";
 
 const router = Router();
 router.use(verifyJWT);
@@ -27,32 +31,40 @@ router.use(verifyJWT);
 router
   .route("/")
   .get(getProjects)
-  .post(createProjectValidator(), validateRequest, createProject);
+  .post(validate(createProjectSchema), createProject);
 
 router
   .route("/:projectId")
-  .get(validateProjectPermission(AvailableUserRole), getProjectById)
+  .get(validate(projectIdSchema), validateProjectPermission(AvailableUserRole), getProjectById)
   .put(
+    validate(projectIdSchema),
     validateProjectPermission([UserRolesEnum.ADMIN]),
-    createProjectValidator(),
-    validateRequest,
+    validate(createProjectSchema),
     updateProject,
   )
-  .delete(validateProjectPermission([UserRolesEnum.ADMIN]), deleteProject);
+  .delete(validate(projectIdSchema), validateProjectPermission([UserRolesEnum.ADMIN]), deleteProject);
 
 router
   .route("/:projectId/members")
-  .get(getProjectMembers)
+  .get(validate(projectIdSchema), validateProjectPermission(AvailableUserRole), getProjectMembers)
   .post(
+    inviteLimiter,
+    validate(addMemberToProjectSchema),
     validateProjectPermission([UserRolesEnum.ADMIN]),
-    addMembertoProjectValidator(),
-    validateRequest,
     addMembersToProject,
   );
 
 router
   .route("/:projectId/members/:userId")
-  .put(validateProjectPermission([UserRolesEnum.ADMIN]), updateMemberRole)
-  .delete(validateProjectPermission([UserRolesEnum.ADMIN]), deleteMember);
+  .put(
+    validate(updateMemberRoleSchema),
+    validateProjectPermission([UserRolesEnum.ADMIN]),
+    updateMemberRole,
+  )
+  .delete(
+    validate(projectMemberSchema),
+    validateProjectPermission([UserRolesEnum.ADMIN]),
+    deleteMember,
+  );
 
 export default router;

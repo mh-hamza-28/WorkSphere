@@ -1,20 +1,25 @@
-import { validationResult } from "express-validator";
 import { ApiError } from "../utils/api-error.js";
 
+export const validate = (schema) => (req, res, next) => {
+  const result = schema.safeParse({
+    body: req.body,
+    params: req.params,
+    query: req.query,
+  });
 
-export const validateRequest = (req, res, next) => {
-    const errors = validationResult(req);
-    
-    if (errors.isEmpty()) {
-        return next();
-    }
-    
-    const extractedErrors = errors.array().map(err => (
-        {
-        [err.path]:err.msg
-        }));
+  if (!result.success) {
+    const extractedErrors = result.error.issues.map((issue) => ({
+      [issue.path.join(".") || "request"]: issue.message,
+    }));
 
-    throw new ApiError(422, "Validation Error",extractedErrors);
-        };
+    throw new ApiError(422, "Validation Error", extractedErrors);
+  }
 
-export default validateRequest;
+  req.body = result.data.body ?? req.body;
+  req.params = result.data.params ?? req.params;
+  next();
+};
+
+export const validateRequest = validate;
+
+export default validate;

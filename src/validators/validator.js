@@ -1,120 +1,214 @@
-import {body} from 'express-validator';
-import { asyncHandler } from '../utils/async-handler.js';
-import { AvailableUserRole } from '../utils/constants.js';
-const useRegisterValidator = () => {
-    return [ 
+import { z } from "zod";
+import { AvailableUserRole } from "../utils/constants.js";
 
-        body("username")
-        .trim()
-        .notEmpty()
-        .withMessage("Username is required")
-        .isLowercase()
-        .withMessage("Username must be in lowercase")
-        .isLength({ min: 10, max: 20 }) 
-        .withMessage("Username must be between 10 and 20 characters long"),
+const objectId = z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid id");
+const optionalText = z.string().trim().max(2000).optional().or(z.literal(""));
+const taskStatus = z.enum(["TODO", "IN_PROGRESS", "DONE"]);
 
-        body("password")
-        .trim()
-        .notEmpty()
-        .withMessage("Password is required")
-        .isLength({ min: 5, max: 20 })
-        .withMessage("Password must be between 5 and 20 characters long"),
+const schema = (shape) =>
+  z.object({
+    body: z.object(shape.body || {}).strict().optional().default({}),
+    params: z.object(shape.params || {}).strict().optional().default({}),
+    query: z.object(shape.query || {}).strict().optional().default({}),
+  });
 
-        body("fullname")
-        .optional()
-        .trim()
-        .notEmpty()
-        .withMessage("Full name is required"),
+export const registerSchema = schema({
+  body: {
+    username: z
+      .string()
+      .trim()
+      .toLowerCase()
+      .min(3, "Username must be at least 3 characters")
+      .max(30, "Username must be at most 30 characters")
+      .regex(/^[a-z0-9_]+$/, "Username can only contain lowercase letters, numbers, and underscores"),
+    fullname: z.string().trim().min(1, "Full name is required").max(80),
+    email: z.string().trim().toLowerCase().email("Invalid email format"),
+    password: z.string().min(5, "Password must be at least 5 characters").max(72),
+  },
+});
 
-        body("email")
-        .trim()
-        .notEmpty()
-        .isEmail()
-        .withMessage("Invalid email format"),
+export const loginSchema = schema({
+  body: {
+    email: z.string().trim().toLowerCase().email("Invalid email"),
+    password: z.string().min(1, "Password is required"),
+  },
+});
 
-        
-    ];
-};
+export const resendEmailVerificationSchema = schema({
+  body: {
+    email: z.string().trim().toLowerCase().email("Invalid email").optional(),
+  },
+});
 
-const userLoginValidator = () => {
-    return [
-        body("email")
-        .optional()
-        .isEmail()
-        .withMessage("Invalid email"),
+export const forgotPasswordSchema = schema({
+  body: {
+    email: z.string().trim().toLowerCase().email("Email is invalid"),
+  },
+});
 
-        body("password")
-        .notEmpty()
-        .withMessage("Password is required")
-    ];
-};
+export const resetPasswordSchema = schema({
+  params: {
+    resetToken: z.string().min(1, "Reset token is required"),
+  },
+  body: {
+    newPassword: z.string().min(5, "Password must be at least 5 characters").max(72),
+  },
+});
 
-const userChangePasswordValidator = () => {
-    return [
-        body("oldPassword")
-        .notEmpty()
-        .withMessage("old password is required"),
+export const changePasswordSchema = schema({
+  body: {
+    oldPassword: z.string().min(1, "Old password is required"),
+    newPassword: z.string().min(5, "Password must be at least 5 characters").max(72),
+  },
+});
 
-        body("newPassword")
-        .notEmpty()
-        .withMessage("New password is required")
-        .isLength({ min: 5, max: 20 })
-        .withMessage("Password must be between 5 and 20 characters long")
-    ];
-};
+export const verifyEmailSchema = schema({
+  params: {
+    verificationToken: z.string().min(1, "Verification token is required"),
+  },
+});
 
-const userForgotPasswordValidator = () => {
-    return [
-        body("email")
-        .notEmpty("Email is required")
-        .isEmail()
-        .withMessage("Email is invalid")
-    ];
-};
+export const createProjectSchema = schema({
+  body: {
+    name: z.string().trim().min(1, "Name is required").max(120),
+    description: optionalText,
+  },
+});
 
- const userResetPasswordValidator = () => {
-    return[
-        body("newPassword")
-        .notEmpty()
-        .withMessage("Password is Required")
-        .isLength({ min: 5, max: 20 })
-        .withMessage("Password must be between 5 and 20 characters long")
-    ];
- };
+export const projectIdSchema = schema({
+  params: {
+    projectId: objectId,
+  },
+});
 
-const createProjectValidator = () => {
-    return [
-         body("name")
-        .notEmpty()
-        .withMessage("Name is Required"),
-  
-        body("description")
-        .optional()
-    ];
-};
+export const addMemberToProjectSchema = schema({
+  params: {
+    projectId: objectId,
+  },
+  body: {
+    email: z.string().trim().toLowerCase().email("Invalid email"),
+    role: z.enum(AvailableUserRole, "Role is invalid"),
+  },
+});
 
-const addMembertoProjectValidator = () =>
-{
-    return [
-        body("email")
-        .trim()
-        .notEmpty()
-        .withMessage("required email")
-        .isEmail()
-        .withMessage("invalid Email"),
+export const projectMemberSchema = schema({
+  params: {
+    projectId: objectId,
+    userId: objectId,
+  },
+});
 
-        body("role")
-        .notEmpty()
-        .withMessage("Role is required")
-        .isIn(AvailableUserRole)
-        .withMessage("Role is Invalid"),
-    ];
-};
+export const updateMemberRoleSchema = schema({
+  params: {
+    projectId: objectId,
+    userId: objectId,
+  },
+  body: {
+    newRole: z.enum(AvailableUserRole, "Role is invalid"),
+  },
+});
 
+export const projectTasksSchema = schema({
+  params: {
+    projectId: objectId,
+  },
+});
 
-export { 
-  useRegisterValidator, userLoginValidator, asyncHandler,
-  userChangePasswordValidator, userForgotPasswordValidator, 
-  userResetPasswordValidator, createProjectValidator, 
-  addMembertoProjectValidator,
-};
+export const createTaskSchema = schema({
+  params: {
+    projectId: objectId,
+  },
+  body: {
+    title: z.string().trim().min(1, "Task title is required").max(160),
+    description: optionalText,
+    assignedTo: objectId.optional().or(z.literal("")),
+    status: taskStatus.optional(),
+    deadline: z.coerce.date().optional().nullable().or(z.literal("")),
+  },
+});
+
+export const taskIdSchema = schema({
+  params: {
+    taskId: objectId,
+  },
+});
+
+export const updateTaskSchema = schema({
+  params: {
+    taskId: objectId,
+  },
+  body: {
+    title: z.string().trim().min(1, "Task title is required").max(160).optional(),
+    description: optionalText,
+    assignedTo: objectId.optional().nullable().or(z.literal("")),
+    status: taskStatus.optional(),
+    deadline: z.coerce.date().optional().nullable().or(z.literal("")),
+  },
+});
+
+export const assignTaskSchema = schema({
+  params: {
+    taskId: objectId,
+  },
+  body: {
+    assignedTo: objectId.optional().nullable().or(z.literal("")),
+    deadline: z.coerce.date().optional().nullable().or(z.literal("")),
+  },
+});
+
+export const taskStatusSchema = schema({
+  params: {
+    taskId: objectId,
+  },
+  body: {
+    status: taskStatus,
+  },
+});
+
+export const createSubtaskSchema = schema({
+  params: {
+    taskId: objectId,
+  },
+  body: {
+    title: z.string().trim().min(1, "Subtask title is required").max(160),
+  },
+});
+
+export const subtaskIdSchema = schema({
+  params: {
+    subtaskId: objectId,
+  },
+});
+
+export const updateSubtaskSchema = schema({
+  params: {
+    subtaskId: objectId,
+  },
+  body: {
+    title: z.string().trim().min(1, "Subtask title is required").max(160),
+  },
+});
+
+export const subtaskStatusSchema = schema({
+  params: {
+    subtaskId: objectId,
+  },
+  body: {
+    isCompleted: z.coerce.boolean(),
+  },
+});
+
+export const notificationIdSchema = schema({
+  params: {
+    notificationId: objectId,
+  },
+});
+
+export const respondToInviteSchema = schema({
+  params: {
+    notificationId: objectId,
+  },
+  body: {
+    action: z.enum(["accept", "reject"]),
+  },
+});
