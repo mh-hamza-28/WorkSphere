@@ -13,7 +13,7 @@ const userSchema = new Schema(
         },
         default:
         {
-            url: `https://res.cloudinary.com/dlqjz8h1/image/upload/v1700000000/default_avatar.png`,
+            url: "",
             localPath: ""
 
         }
@@ -95,6 +95,13 @@ userSchema.pre("save", async function () {
     if(!this.isModified("password")) return;
     this.password = await bcrypt.hash(this.password, 10);
 });
+
+userSchema.virtual("fullName").get(function () {
+    return this.fullname;
+});
+
+userSchema.set("toJSON", { virtuals: true });
+userSchema.set("toObject", { virtuals: true });
 
 userSchema.methods.isPasswordCorrect = async function (password){
     return await bcrypt.compare(password, this.password);

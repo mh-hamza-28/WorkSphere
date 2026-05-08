@@ -16,16 +16,17 @@ const sendEmail = async (options) =>
   const emailHtml = mailGenerator.generate(options.mailgenContent);
 
   const transporter = nodemailer.createTransport({
-    host: process.env.MAILTRAP_SMTP_HOST,
-    port: process.env.MAILTRAP_SMTP_PORT,
+    host: process.env.SMTP_HOST || process.env.MAILTRAP_SMTP_HOST,
+    port: Number(process.env.SMTP_PORT || process.env.MAILTRAP_SMTP_PORT || 587),
+    secure: String(process.env.SMTP_PORT || "") === "465",
     auth: {
-      user: process.env.MAILTRAP_SMTP_USER,
-      pass: process.env.MAILTRAP_SMTP_PASS,
+      user: process.env.SMTP_USER || process.env.MAILTRAP_SMTP_USER,
+      pass: process.env.SMTP_PASS || process.env.MAILTRAP_SMTP_PASS,
     },
   });
 
   const mail = {
-    from: "mail.taskmanager@example.com",
+    from: process.env.SMTP_FROM || process.env.SMTP_USER || "mail.taskmanager@example.com",
     to: options.email,
     subject: options.subject,
     text: emailTextual,
@@ -35,10 +36,8 @@ const sendEmail = async (options) =>
   try {
     await transporter.sendMail(mail);
   } catch (error) {
-    console.error(
-      "Email service failed siliently. Make sure that you have provided your MAILTRAP credentials in the .env file",
-    );
-    console.error("Error: ", error);
+    console.error("Email service failed:", error);
+    throw error;
   }
 };
 

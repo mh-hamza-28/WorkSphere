@@ -22,12 +22,12 @@ const taskService = {
   },
 
   assignTask: async (taskId, assignedTo) => {
-    const response = await api.put(`/tasks/${taskId}/assign`, { assignedTo })
+    const response = await api.patch(`/tasks/${taskId}/assign`, { assignedTo })
     return response.data.data || response.data
   },
 
   changeTaskStatus: async (taskId, status) => {
-    const response = await api.put(`/tasks/${taskId}/status`, { status })
+    const response = await api.patch(`/tasks/${taskId}/status`, { status })
     return response.data.data || response.data
   },
 
@@ -47,7 +47,7 @@ const taskService = {
   },
 
   markSubtaskComplete: async (subtaskId, isCompleted) => {
-    const response = await api.put(`/tasks/subtasks/${subtaskId}/status`, { isCompleted })
+    const response = await api.patch(`/tasks/subtasks/${subtaskId}/status`, { isCompleted })
     return response.data.data || response.data
   },
 }

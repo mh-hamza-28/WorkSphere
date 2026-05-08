@@ -3,14 +3,23 @@ import { Link } from 'react-router-dom'
 import { Plus, Search, Filter, CheckSquare, FolderKanban } from 'lucide-react'
 import { useProjects } from '../../hooks/useProjects.js'
 import { useTasks } from '../../hooks/useTasks.js'
+import projectService from '../../services/projectService.js'
 import TaskCard from '../../components/tasks/TaskCard.jsx'
 import Modal from '../../components/common/Modal.jsx'
 import Loader from '../../components/common/Loader.jsx'
 import './Tasks.css'
 
+const toDateTimeInputValue = (value) => {
+  if (!value) return ''
+  const date = new Date(value)
+  const offsetDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000)
+  return offsetDate.toISOString().slice(0, 16)
+}
+
 const Tasks = () => {
   const { projects, refetch: refetchProjects } = useProjects()
   const [selectedProject, setSelectedProject] = useState('')
+  const [currentMembers, setCurrentMembers] = useState([])
   const { tasks, loading, createTask, updateTask, deleteTask, assignTask, changeTaskStatus } = useTasks(selectedProject)
   
   const [searchTerm, setSearchTerm] = useState('')
@@ -24,11 +33,9 @@ const Tasks = () => {
     title: '', 
     description: '', 
     assignedTo: '', 
-    status: 'TODO' 
+    status: 'TODO',
+    deadline: ''
   })
-
-  const currentProject = projects.find(p => (p.project?._id || p._id) === selectedProject)
-  const currentMembers = currentProject?.members || []
 
   useEffect(() => {
     refetchProjects()
@@ -39,6 +46,21 @@ const Tasks = () => {
       setSelectedProject(projects[0].project?._id || projects[0]._id)
     }
   }, [projects, selectedProject])
+
+  useEffect(() => {
+    const fetchMembers = async () => {
+      if (!selectedProject) {
+        setCurrentMembers([])
+        return
+      }
+      const members = await projectService.getProjectMembers(selectedProject)
+      setCurrentMembers(members || [])
+    }
+
+    fetchMembers().catch(() => setCurrentMembers([]))
+    window.addEventListener('projects:changed', fetchMembers)
+    return () => window.removeEventListener('projects:changed', fetchMembers)
+  }, [selectedProject])
 
   const filteredTasks = tasks.filter(task => {
     const matchesSearch = task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -55,7 +77,7 @@ const Tasks = () => {
     try {
       await createTask(taskForm)
       setIsCreateModalOpen(false)
-      setTaskForm({ title: '', description: '', assignedTo: '', status: 'TODO' })
+      setTaskForm({ title: '', description: '', assignedTo: '', status: 'TODO', deadline: '' })
     } finally {
       setSubmitting(false)
     }
@@ -68,7 +90,7 @@ const Tasks = () => {
       await updateTask(selectedTask._id, taskForm)
       setIsEditTaskModalOpen(false)
       setSelectedTask(null)
-      setTaskForm({ title: '', description: '', assignedTo: '', status: 'TODO' })
+      setTaskForm({ title: '', description: '', assignedTo: '', status: 'TODO', deadline: '' })
     } finally {
       setSubmitting(false)
     }
@@ -86,7 +108,8 @@ const Tasks = () => {
       title: task.title,
       description: task.description || '',
       assignedTo: task.assignedTo?._id || '',
-      status: task.status
+      status: task.status,
+      deadline: toDateTimeInputValue(task.deadline)
     })
     setIsEditTaskModalOpen(true)
   }
@@ -258,7 +281,7 @@ const Tasks = () => {
               <option value="">Unassigned</option>
               {currentMembers.map((member) => (
                 <option key={member.user?._id} value={member.user?._id}>
-                  {member.user?.fullName || member.user?.username} ({member.user?.email})
+                  {member.user?.fullname || member.user?.fullName || member.user?.username} ({member.user?.email})
                 </option>
               ))}
             </select>
@@ -274,6 +297,15 @@ const Tasks = () => {
               <option value="IN_PROGRESS">In Progress</option>
               <option value="DONE">Done</option>
             </select>
+          </div>
+          <div className="form-group">
+            <label className="form-label">Deadline</label>
+            <input
+              type="datetime-local"
+              className="form-input"
+              value={taskForm.deadline}
+              onChange={(e) => setTaskForm({ ...taskForm, deadline: e.target.value })}
+            />
           </div>
           <div className="form-actions">
             <button type="button" className="btn btn-secondary" onClick={() => setIsCreateModalOpen(false)}>
@@ -323,7 +355,7 @@ const Tasks = () => {
               <option value="">Unassigned</option>
               {currentMembers.map((member) => (
                 <option key={member.user?._id} value={member.user?._id}>
-                  {member.user?.fullName || member.user?.username}
+                  {member.user?.fullname || member.user?.fullName || member.user?.username}
                 </option>
               ))}
             </select>
@@ -339,6 +371,15 @@ const Tasks = () => {
               <option value="IN_PROGRESS">In Progress</option>
               <option value="DONE">Done</option>
             </select>
+          </div>
+          <div className="form-group">
+            <label className="form-label">Deadline</label>
+            <input
+              type="datetime-local"
+              className="form-input"
+              value={taskForm.deadline}
+              onChange={(e) => setTaskForm({ ...taskForm, deadline: e.target.value })}
+            />
           </div>
           <div className="form-actions">
             <button type="button" className="btn btn-secondary" onClick={() => setIsEditTaskModalOpen(false)}>

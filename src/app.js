@@ -6,6 +6,7 @@ import healthCheckRouter from "./routes/healthcheck.routes.js";
 import authRouter from "./routes/auth.routes.js";
 import projectRouter from "./routes/project.routes.js";
 import taskRouter from "./routes/task.routes.js";
+import notificationRouter from "./routes/notification.routes.js";
 
 const app = express();
 
@@ -31,6 +32,7 @@ app.use("/api/v1/login", authRouter);
 app.use("/api/v1/register", authRouter);
 app.use("/api/v1/projects", projectRouter);
 app.use("/api/v1/tasks", taskRouter);
+app.use("/api/v1/notifications", notificationRouter);
 
 app.get("/", (req, res) => {
     res.send("Welcome to my project!");

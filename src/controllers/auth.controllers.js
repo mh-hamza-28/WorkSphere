@@ -54,14 +54,19 @@ const registerUser = asyncHandler(async (req, res) => {
 
   await user.save({ validateBeforeSave: false });
 
-  sendEmail({
-    email: user?.email,
-    subject: "Please verify your email",
-    mailgenContent: emailVerificationMailgenContent(
-      user.username,
-      `${req.protocol}://${req.get("host")}/api/v1/auth/verify-email/${unHashedtoken}`,
-    ),
-  });
+  try {
+    await sendEmail({
+      email: user?.email,
+      subject: "Please verify your email",
+      mailgenContent: emailVerificationMailgenContent(
+        user.username,
+        `${req.protocol}://${req.get("host")}/api/v1/auth/verify-email/${unHashedtoken}`,
+      ),
+    });
+  } catch (error) {
+    await User.findByIdAndDelete(user._id);
+    throw new ApiError(500, "Verification email could not be sent. Please check SMTP settings.");
+  }
 
   const createdUser = await User.findById(user._id).select(
     "-password -refreshToken -emailverificationToken -emailverificationExpiry",
@@ -102,6 +107,11 @@ const isPasswordValid = await user.isPasswordCorrect(password);
 if (!isPasswordValid)
 {
     throw new ApiError(400,"Invalid password");
+}
+
+if (!user.isEmailVerified)
+{
+    throw new ApiError(403,"Please verify your email before logging in");
 }
 
 const {accessToken, refreshToken} = await generateAccessAndRefreshTokens(user._id);
@@ -165,7 +175,7 @@ const getCurrentUser = asyncHandler(async(req,res)=>{
 });
 
 const verifyEmail = asyncHandler(async(req,res)=>{ 
-  const {verificationtoken} = req.params;
+  const verificationtoken = req.params.verificationToken;
 
   if (!verificationtoken)
   {
@@ -193,19 +203,17 @@ const verifyEmail = asyncHandler(async(req,res)=>{
 
     user.isEmailVerified = true;
     await user.save({ validateBeforeSave: false });
-    return res
-    .status(200)
-    .json(
-      new ApiResponse(200, 
-        {
-          isEmailVerified: true
-        }, 
-        "Email verified" )
-    );
+    return res.redirect(`${process.env.FRONTEND_URL || "http://localhost:5173"}/login?verified=true`);
 });
 
 const resendEmailVerification = asyncHandler(async(req,res)=>{
-  const user = await User.findById(req.user._id);
+  if (!req.user?._id && !req.body.email) {
+    throw new ApiError(400, "Email is required");
+  }
+
+  const user = req.user?._id
+    ? await User.findById(req.user._id)
+    : await User.findOne({ email: req.body.email.toLowerCase() });
 
 if(!user)
 {
@@ -224,7 +232,7 @@ const { unHashedtoken, hashedToken, tokenExpiry } =
 
   await user.save({ validateBeforeSave: false });
 
-  sendEmail({
+  await sendEmail({
     email: user?.email,
     subject: "Please verify your email",
     mailgenContent: emailVerificationMailgenContent(
@@ -306,7 +314,7 @@ const forgotPasswordRequest = asyncHandler(async(req,res)=>{
 const { unHashedtoken, hashedToken, tokenExpiry } = user.generateTemporaryToken();
 
 user.forgotPasswordToken = hashedToken;
-user.forgotPasswordExpiry = tokenExpiry;
+user.forgotPasswordTokenExpiry = tokenExpiry;
 
 await user.save({ validateBeforeSave: false });
 
@@ -315,7 +323,7 @@ await sendEmail({
   subject: "Password Reset Request",
   mailgenContent: forgotPasswordMailgenContent(
     user.username,
-    `${process.env.FORGOT_PASSWORD_URL}/${unHashedtoken}`,
+    `${process.env.FORGOT_PASSWORD_URL || `${process.env.FRONTEND_URL || "http://localhost:5173"}/reset-password`}/${unHashedtoken}`,
   ),
 });
 return res
@@ -336,18 +344,18 @@ const resetForgottenPassword = asyncHandler(async(req,res)=>{
 
 const user = await User.findOne({
   forgotPasswordToken: hashedToken,
-  forgotPasswordExpiry: { $gt: Date.now() }
+  forgotPasswordTokenExpiry: { $gt: Date.now() }
   })
 
   if (!user)
 {
-  throw new ApiError(489, "Invalid or expired password reset token");
+  throw new ApiError(400, "Invalid or expired password reset token");
 }
-user.forgotPasswordExpiry = undefined;
+user.forgotPasswordTokenExpiry = undefined;
 user.forgotPasswordToken = undefined;
 
 user.password = newPassword;
-await user.save({validateBeforeSave: false});
+await user.save();
 
 return res
 .status(200)
@@ -367,7 +375,8 @@ const changeCurrentPassword = asyncHandler(async(req,res)=>{
       throw new ApiError(400, "Old password is incorrect");
     }
     user.password = newPassword;
-    await user.save({ validateBeforeSave: false });
+    user.refreshToken = "";
+    await user.save();
     return res
     .status(200)
     .json(

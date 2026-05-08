@@ -17,6 +17,9 @@ const Profile = () => {
     confirmPassword: ''
   })
 
+  const displayName = user?.fullname || user?.fullName || user?.username
+  const profileInitial = (displayName || user?.email || 'U').charAt(0).toUpperCase()
+
   const handlePasswordChange = async (e) => {
     e.preventDefault()
     setMessage({ type: '', text: '' })
@@ -77,10 +80,10 @@ const Profile = () => {
               {user?.avatar?.url ? (
                 <img src={user.avatar.url} alt={user.username} />
               ) : (
-                <span>{user?.username?.charAt(0).toUpperCase()}</span>
+                <span>{profileInitial}</span>
               )}
             </div>
-            <h3 className="profile-name">{user?.fullName}</h3>
+            <h3 className="profile-name">{displayName}</h3>
             <p className="profile-username">@{user?.username}</p>
             <span className={`verification-badge ${user?.isEmailVerified ? 'verified' : 'unverified'}`}>
               {user?.isEmailVerified ? (
@@ -122,7 +125,7 @@ const Profile = () => {
                   <label className="info-label">
                     <User size={14} /> Full Name
                   </label>
-                  <p className="info-value">{user?.fullName}</p>
+                  <p className="info-value">{displayName}</p>
                 </div>
 
                 <div className="info-item">

@@ -38,6 +38,14 @@ const taskSchema = new Schema(
       ref: "User",
       required: true,
     },
+    deadline: {
+      type: Date,
+      default: null,
+    },
+    deadlineReminderSentAt: {
+      type: Date,
+      default: null,
+    },
   },
   { timestamps: true },
 );

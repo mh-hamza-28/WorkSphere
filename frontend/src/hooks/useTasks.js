@@ -33,6 +33,15 @@ export const useTasks = (projectId) => {
     fetchTasks()
   }, [fetchTasks])
 
+  useEffect(() => {
+    const handleTasksChanged = (event) => {
+      const changedProjectId = event.detail?.project?._id || event.detail?.project
+      if (!changedProjectId || changedProjectId === projectId) fetchTasks()
+    }
+    window.addEventListener('tasks:changed', handleTasksChanged)
+    return () => window.removeEventListener('tasks:changed', handleTasksChanged)
+  }, [fetchTasks, projectId])
+
   const createTask = async (taskData) => {
     try {
       const response = await taskService.createTask(projectId, taskData)

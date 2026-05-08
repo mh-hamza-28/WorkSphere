@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Eye, EyeOff, Mail, Lock, ArrowRight } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext.jsx'
+import authService from '../../services/authService.js'
 import Loader from '../../components/common/Loader.jsx'
 import './Auth.css'
 
@@ -13,9 +14,12 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [errors, setErrors] = useState({})
+  const [verificationState, setVerificationState] = useState('idle')
   
   const { login } = useAuth()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const verified = searchParams.get('verified') === 'true'
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -48,6 +52,7 @@ const Login = () => {
     }
 
     setLoading(true)
+    setVerificationState('idle')
     try {
       await login(formData)
       navigate('/dashboard')
@@ -69,9 +74,24 @@ const Login = () => {
       } else if (backendMessage) {
         // Backend sent a specific message (e.g., "User not found", "Invalid password")
         setErrors({ general: backendMessage })
+        setVerificationState(error.response?.status === 403 ? 'can-send' : 'idle')
       } else {
         setErrors({ general: error.message || 'Login failed. Please try again.' })
       }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const sendVerificationEmail = async (nextState) => {
+    setLoading(true)
+    try {
+      await authService.resendVerificationEmail(formData.email)
+      setErrors({ general: nextState === 'resent' ? 'Mail resent. Check your mail.' : 'Email sent. Check your mail.' })
+      setVerificationState(nextState)
+    } catch (error) {
+      setErrors({ general: error.response?.data?.message || 'Failed to resend verification email' })
+      setVerificationState('can-send')
     } finally {
       setLoading(false)
     }
@@ -90,7 +110,38 @@ const Login = () => {
           </div>
 
           {errors.general && (
-            <div className="auth-error">{errors.general}</div>
+            <div className="auth-error">
+              <p>{errors.general}</p>
+
+              {verificationState === 'can-send' && (
+                <div className="resend">
+                  <button
+                    type="button"
+                    className="auth-inline-action"
+                    onClick={() => sendVerificationEmail('sent')}
+                  >
+                    Send verification email
+                  </button>
+                </div>
+              )}
+
+              {verificationState === 'sent' && (
+                <div className="resend">
+                  <p>Didn't receive it?</p>
+                  <button
+                    type="button"
+                    className="auth-inline-action"
+                    onClick={() => sendVerificationEmail('resent')}
+                  >
+                    Resend verification email
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {verified && !errors.general && (
+            <div className="auth-success">Email verified. You can sign in now.</div>
           )}
 
           <form onSubmit={handleSubmit} className="auth-form">

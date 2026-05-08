@@ -25,6 +25,12 @@ export const useProjects = () => {
     fetchProjects()
   }, [fetchProjects])
 
+  useEffect(() => {
+    const handleProjectsChanged = () => fetchProjects()
+    window.addEventListener('projects:changed', handleProjectsChanged)
+    return () => window.removeEventListener('projects:changed', handleProjectsChanged)
+  }, [fetchProjects])
+
   const createProject = async (projectData) => {
     try {
       const response = await projectService.createProject(projectData)
@@ -107,10 +113,16 @@ export const useProject = (projectId) => {
     fetchProject()
   }, [fetchProject])
 
+  useEffect(() => {
+    const handleProjectsChanged = () => fetchProject()
+    window.addEventListener('projects:changed', handleProjectsChanged)
+    return () => window.removeEventListener('projects:changed', handleProjectsChanged)
+  }, [fetchProject])
+
   const addMember = async (email, role) => {
     try {
       await projectService.addMember(projectId, { email, role })
-      toast.success('Member added successfully')
+      toast.success('Project request sent to user')
       await fetchProject()
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to add member')

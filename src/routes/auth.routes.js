@@ -34,6 +34,9 @@ router.route("/forgot-password").post( userForgotPasswordValidator(), validateRe
 // reset-password route
 router.route("/reset-password/:resetToken").post( userResetPasswordValidator(), validateRequest,resetForgottenPassword);
 
+// resend-email-verification route
+router.route("/resend-email-verification").post(resendEmailVerification);
+
 
 // <--------------------------------------------------------> //
 
@@ -50,9 +53,6 @@ router.route("/current-user").post(verifyJWT, getCurrentUser);
 
 // change-password route
 router.route("/change-password").post(verifyJWT, userChangePasswordValidator(),validateRequest,changeCurrentPassword);
-
-// resend-email-verification route
-router.route("/resend-email-verification").post(verifyJWT, resendEmailVerification);
 
 // <---------------------------------------------------------------> //
 

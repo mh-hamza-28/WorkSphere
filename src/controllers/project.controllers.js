@@ -6,6 +6,8 @@ import { ApiError } from "../utils/api-error.js";
 import { asyncHandler } from "../utils/async-handler.js";
 import mongoose from "mongoose";
 import { AvailableUserRole, UserRolesEnum } from "../utils/constants.js";
+import { Notification, NotificationTypeEnum } from "../models/notification.model.js";
+import { createNotification } from "../services/notification.service.js";
 
 const getProjects = asyncHandler(async (req, res) => {
   const projects = await ProjectMember.aggregate([
@@ -89,6 +91,15 @@ const createProject = asyncHandler(async (req, res) => {
     role: UserRolesEnum.ADMIN,
   });
 
+  await createNotification({
+    recipient: req.user._id,
+    actor: req.user._id,
+    project: project._id,
+    type: NotificationTypeEnum.PROJECT_CREATED,
+    title: "New project created",
+    message: `${project.name} was created by ${req.user.fullname || req.user.username}.`,
+  });
+
   return res
     .status(201)
     .json(new ApiResponse(201, project, "Project created Successfully"));
@@ -130,31 +141,61 @@ const deleteProject = asyncHandler(async (req, res) => {
 const addMembersToProject = asyncHandler(async (req, res) => {
   const { email, role } = req.body;
   const { projectId } = req.params;
-  const user = await User.findOne({ email });
+  const user = await User.findOne({ email: email.toLowerCase() });
 
   if (!user) {
     throw new ApiError(404, "User does not exists");
   }
 
-  await ProjectMember.findByIdAndUpdate(
-    {
-      user: new mongoose.Types.ObjectId(user._id),
-      project: new mongoose.Types.ObjectId(projectId),
-    },
-    {
-      user: new mongoose.Types.ObjectId(user._id),
-      project: new mongoose.Types.ObjectId(projectId),
-      role: role,
-    },
-    {
-      new: true,
-      upsert: true,
-    },
-  );
+  if (!user.refreshToken) {
+    throw new ApiError(409, "User exists but is not currently logged in");
+  }
+
+  if (user._id.toString() === req.user._id.toString()) {
+    throw new ApiError(400, "You are already a project member");
+  }
+
+  const project = await Project.findById(projectId);
+  if (!project) {
+    throw new ApiError(404, "Project not found");
+  }
+
+  const existingMember = await ProjectMember.findOne({
+    user: new mongoose.Types.ObjectId(user._id),
+    project: new mongoose.Types.ObjectId(projectId),
+  });
+
+  if (existingMember) {
+    throw new ApiError(409, "User is already a project member");
+  }
+
+  const existingInvite = await Notification.findOne({
+    recipient: user._id,
+    targetUser: user._id,
+    project: new mongoose.Types.ObjectId(projectId),
+    type: NotificationTypeEnum.PROJECT_INVITE,
+    invitationStatus: "pending",
+  });
+
+  if (existingInvite) {
+    throw new ApiError(409, "A pending request already exists for this user");
+  }
+
+  const invite = await createNotification({
+    recipient: user._id,
+    actor: req.user._id,
+    targetUser: user._id,
+    project: projectId,
+    type: NotificationTypeEnum.PROJECT_INVITE,
+    title: "Project invitation",
+    message: `${req.user.fullname || req.user.username} invited you to ${project.name}.`,
+    role,
+    invitationStatus: "pending",
+  });
 
   return res
     .status(201)
-    .json(new ApiResponse(201, {}, "Project member added successfully"));
+    .json(new ApiResponse(201, invite, "Project request sent to user"));
 });
 
 const getProjectMembers = asyncHandler(async (req, res) => {
@@ -183,7 +224,9 @@ const getProjectMembers = asyncHandler(async (req, res) => {
             $project: {
               _id: 1,
               username: 1,
+              fullname: 1,
               fullName: 1,
+              email: 1,
               avatar: 1,
             },
           },
@@ -242,6 +285,18 @@ const updateMemberRole = asyncHandler(async (req, res) => {
   if (!projectMember) {
     throw new ApiError(400, "Project member not found");
   }
+
+  const project = await Project.findById(projectId);
+  await createNotification({
+    recipient: userId,
+    actor: req.user._id,
+    targetUser: userId,
+    project: projectId,
+    type: NotificationTypeEnum.ROLE_ASSIGNED,
+    title: "Role assigned",
+    message: `${req.user.fullname || req.user.username} assigned you the ${newRole} role in ${project?.name || "a project"}.`,
+    role: newRole,
+  });
 
   return res
     .status(200)

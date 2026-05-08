@@ -55,9 +55,11 @@ const userChangePasswordValidator = () => {
         .notEmpty()
         .withMessage("old password is required"),
 
-        body("newpPassword")
+        body("newPassword")
         .notEmpty()
         .withMessage("New password is required")
+        .isLength({ min: 5, max: 20 })
+        .withMessage("Password must be between 5 and 20 characters long")
     ];
 };
 
@@ -65,9 +67,8 @@ const userForgotPasswordValidator = () => {
     return [
         body("email")
         .notEmpty("Email is required")
-        .withMessage()
         .isEmail()
-        .withMessage("Email is valid")
+        .withMessage("Email is invalid")
     ];
 };
 
@@ -76,6 +77,8 @@ const userForgotPasswordValidator = () => {
         body("newPassword")
         .notEmpty()
         .withMessage("Password is Required")
+        .isLength({ min: 5, max: 20 })
+        .withMessage("Password must be between 5 and 20 characters long")
     ];
  };
 

@@ -31,8 +31,8 @@ const authService = {
     return response.data.data || response.data
   },
 
-  resendVerificationEmail: async () => {
-    const response = await api.post('/auth/resend-email-verification')
+  resendVerificationEmail: async (email) => {
+    const response = await api.post('/auth/resend-email-verification', email ? { email } : {})
     return response.data.data || response.data
   },
 

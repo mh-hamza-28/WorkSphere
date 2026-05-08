@@ -109,7 +109,7 @@ const TaskCard = ({
         <div className="task-assignee">
           <User size={14} />
           {task.assignedTo ? (
-            <span>{task.assignedTo.fullName || task.assignedTo.email}</span>
+            <span>{task.assignedTo.fullname || task.assignedTo.fullName || task.assignedTo.username || task.assignedTo.email}</span>
           ) : (
             <select 
               className="assign-select"
@@ -119,7 +119,7 @@ const TaskCard = ({
               <option value="">Assign to...</option>
               {projectMembers?.map((member) => (
                 <option key={member.user._id} value={member.user._id}>
-                  {member.user.fullName || member.user.email}
+                  {member.user.fullname || member.user.fullName || member.user.username || member.user.email}
                 </option>
               ))}
             </select>
@@ -131,6 +131,13 @@ const TaskCard = ({
           <span>{format(new Date(task.createdAt), 'MMM d')}</span>
         </div>
       </div>
+
+      {task.deadline && (
+        <div className="task-deadline">
+          <Clock size={14} />
+          <span>Deadline {format(new Date(task.deadline), 'MMM d, h:mm a')}</span>
+        </div>
+      )}
 
       {totalSubtasks > 0 && (
         <div className="task-subtasks-summary">

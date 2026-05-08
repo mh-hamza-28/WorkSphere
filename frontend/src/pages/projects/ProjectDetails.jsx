@@ -15,7 +15,15 @@ import { useTasks } from '../../hooks/useTasks.js'
 import TaskCard from '../../components/tasks/TaskCard.jsx'
 import Modal from '../../components/common/Modal.jsx'
 import Loader from '../../components/common/Loader.jsx'
+import toast from 'react-hot-toast'
 import './ProjectDetails.css'
+
+const toDateTimeInputValue = (value) => {
+  if (!value) return ''
+  const date = new Date(value)
+  const offsetDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000)
+  return offsetDate.toISOString().slice(0, 16)
+}
 
 const ProjectDetails = () => {
   const { projectId } = useParams()
@@ -40,7 +48,7 @@ const ProjectDetails = () => {
   const [submitting, setSubmitting] = useState(false)
   
   const [memberForm, setMemberForm] = useState({ email: '', role: 'member' })
-  const [taskForm, setTaskForm] = useState({ title: '', description: '', assignedTo: '', status: 'TODO' })
+  const [taskForm, setTaskForm] = useState({ title: '', description: '', assignedTo: '', status: 'TODO', deadline: '' })
 
   const loading = projectLoading || tasksLoading
 
@@ -51,9 +59,17 @@ const ProjectDetails = () => {
       await addMember(memberForm.email, memberForm.role)
       setIsAddMemberModalOpen(false)
       setMemberForm({ email: '', role: 'member' })
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'User does not exist')
     } finally {
       setSubmitting(false)
     }
+  }
+
+  const handleRemoveMember = async (member) => {
+    const name = member.user?.fullname || member.user?.fullName || member.user?.username || member.user?.email
+    if (!window.confirm(`Remove ${name} from this project? Their previous assigned and done tasks will stay linked if they are added again.`)) return
+    await removeMember(member.user._id)
   }
 
   const handleCreateTask = async (e) => {
@@ -62,7 +78,7 @@ const ProjectDetails = () => {
     try {
       await createTask(taskForm)
       setIsCreateTaskModalOpen(false)
-      setTaskForm({ title: '', description: '', assignedTo: '', status: 'TODO' })
+      setTaskForm({ title: '', description: '', assignedTo: '', status: 'TODO', deadline: '' })
     } finally {
       setSubmitting(false)
     }
@@ -75,7 +91,7 @@ const ProjectDetails = () => {
       await updateTask(selectedTask._id, taskForm)
       setIsEditTaskModalOpen(false)
       setSelectedTask(null)
-      setTaskForm({ title: '', description: '', assignedTo: '', status: 'TODO' })
+      setTaskForm({ title: '', description: '', assignedTo: '', status: 'TODO', deadline: '' })
     } finally {
       setSubmitting(false)
     }
@@ -101,7 +117,8 @@ const ProjectDetails = () => {
       title: task.title,
       description: task.description || '',
       assignedTo: task.assignedTo?._id || '',
-      status: task.status
+      status: task.status,
+      deadline: toDateTimeInputValue(task.deadline)
     })
     setIsEditTaskModalOpen(true)
   }
@@ -288,11 +305,11 @@ const ProjectDetails = () => {
                   {member.user?.avatar?.url ? (
                     <img src={member.user.avatar.url} alt={member.user.username} />
                   ) : (
-                    <span>{member.user?.username?.charAt(0).toUpperCase()}</span>
+                    <span>{(member.user?.fullname || member.user?.fullName || member.user?.username || 'U').charAt(0).toUpperCase()}</span>
                   )}
                 </div>
                 <div className="member-info">
-                  <span className="member-name">{member.user?.fullName || member.user?.username}</span>
+                  <span className="member-name">{member.user?.fullname || member.user?.fullName || member.user?.username}</span>
                   <span className="member-email">{member.user?.email}</span>
                 </div>
                 <span className={`badge badge-${member.role}`}>
@@ -300,7 +317,7 @@ const ProjectDetails = () => {
                 </span>
                 <button 
                   className="member-remove"
-                  onClick={() => removeMember(member.user._id)}
+                  onClick={() => handleRemoveMember(member)}
                 >
                   <Trash2 size={16} />
                 </button>
@@ -386,7 +403,7 @@ const ProjectDetails = () => {
               <option value="">Unassigned</option>
               {members.map((member) => (
                 <option key={member.user._id} value={member.user._id}>
-                  {member.user.fullName || member.user.username} ({member.user.email})
+                  {member.user.fullname || member.user.fullName || member.user.username} ({member.user.email})
                 </option>
               ))}
             </select>
@@ -402,6 +419,15 @@ const ProjectDetails = () => {
               <option value="IN_PROGRESS">In Progress</option>
               <option value="DONE">Done</option>
             </select>
+          </div>
+          <div className="form-group">
+            <label className="form-label">Deadline</label>
+            <input
+              type="datetime-local"
+              className="form-input"
+              value={taskForm.deadline}
+              onChange={(e) => setTaskForm({ ...taskForm, deadline: e.target.value })}
+            />
           </div>
           <div className="form-actions">
             <button type="button" className="btn btn-secondary" onClick={() => setIsCreateTaskModalOpen(false)}>
@@ -451,7 +477,7 @@ const ProjectDetails = () => {
               <option value="">Unassigned</option>
               {members.map((member) => (
                 <option key={member.user._id} value={member.user._id}>
-                  {member.user.fullName || member.user.username}
+                  {member.user.fullname || member.user.fullName || member.user.username}
                 </option>
               ))}
             </select>
@@ -467,6 +493,15 @@ const ProjectDetails = () => {
               <option value="IN_PROGRESS">In Progress</option>
               <option value="DONE">Done</option>
             </select>
+          </div>
+          <div className="form-group">
+            <label className="form-label">Deadline</label>
+            <input
+              type="datetime-local"
+              className="form-input"
+              value={taskForm.deadline}
+              onChange={(e) => setTaskForm({ ...taskForm, deadline: e.target.value })}
+            />
           </div>
           <div className="form-actions">
             <button type="button" className="btn btn-secondary" onClick={() => setIsEditTaskModalOpen(false)}>

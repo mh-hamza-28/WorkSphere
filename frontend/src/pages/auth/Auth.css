@@ -64,6 +64,35 @@
   font-size: 0.875rem;
 }
 
+.auth-inline-action {
+  display: block;
+  margin-top: 0.5rem;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-weight: 800;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+}
+.resend {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding-right: 20px;
+}
+.auth-success {
+  background-color: #ecfdf5;
+  border: 1px solid #bbf7d0;
+  color: var(--success-color);
+  padding: 0.75rem 1rem;
+  border-radius: var(--border-radius);
+  margin-bottom: 1.5rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
 .auth-form {
   display: flex;
   flex-direction: column;
